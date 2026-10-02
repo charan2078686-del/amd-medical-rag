@@ -1,0 +1,7 @@
+{
+  "answer": "Medication: Metformin, Dosage: 850 mg, Frequency: Twice daily, Instructions: Take with morning and evening meals",
+  "citations": [
+    "sample_prescription.csv"
+  ],
+  "confidence": 0.95
+}

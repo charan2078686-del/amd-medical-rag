@@ -1,0 +1,7 @@
+{
+  "answer": "Medication: Amoxicillin, Dosage: 500 mg, Frequency: 3 times daily, Instructions: Take with food for 7 days",
+  "citations": [
+    "sample_prescription.csv"
+  ],
+  "confidence": 0.95
+}

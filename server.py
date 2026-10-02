@@ -10,7 +10,7 @@ class RAGService:
     def __init__(self):
         self.corpus_dir = None
         self.indexed_files = []
-        print("[*] Initializing RAG Service...")
+        print("[*] Initializing Medical RAG & Prescription Scanner...")
 
     def index(self, corpus_dir):
         self.corpus_dir = corpus_dir
@@ -28,18 +28,44 @@ class RAGService:
         citations = []
         confidence = 0.0
 
+        # Extract meaningful terms
+        stopwords = {
+            "what", "is", "the", "patient's", "patients", "and", "or",
+            "level", "status", "value", "in", "of", "a", "an", "for",
+            "prescribed", "prescription", "dose", "dosage", "frequency", "how", "much"
+        }
+        tokens = [w for w in query_text.lower().replace("?", "").replace(",", "").split() if w not in stopwords and len(w) > 2]
+        pattern = "|".join(tokens) if tokens else query_text
+
         for file_path in self.indexed_files:
             rel_path = os.path.relpath(file_path, corpus_dir)
             try:
                 if file_path.endswith(".csv"):
                     df = pd.read_csv(file_path)
+                    
+                    # Match against any text column in the dataset
                     for col in df.columns:
-                        m = df[df[col].astype(str).str.contains(query_text, case=False, na=False)]
+                        m = df[df[col].astype(str).str.contains(pattern, case=False, na=False)]
                         if not m.empty:
-                            answer = str(m.iloc[0].values[1]) if len(m.iloc[0].values) > 1 else str(m.iloc[0].values[0])
+                            row = m.iloc[0].to_dict()
+                            
+                            # Format response based on file type (Prescription vs Lab Report)
+                            if "medication" in row:
+                                answer = (
+                                    f"Medication: {row.get('medication', '')}, "
+                                    f"Dosage: {row.get('dosage', '')}, "
+                                    f"Frequency: {row.get('frequency', '')}, "
+                                    f"Instructions: {row.get('instructions', '')}"
+                                )
+                            elif "test_name" in row:
+                                answer = f"{row.get('test_name', '')}: {row.get('value', '')} ({row.get('status', '')})"
+                            else:
+                                answer = ", ".join([f"{k}: {v}" for k, v in row.items()])
+
                             citations = [rel_path]
-                            confidence = 0.90
+                            confidence = 0.95
                             break
+
             except Exception:
                 continue
 
@@ -47,7 +73,7 @@ class RAGService:
                 break
 
         return {
-            "answer": answer.strip() if answer else "",
+            "answer": answer.strip() if answer else "No matching medical records or prescriptions found.",
             "citations": citations,
             "confidence": confidence if answer else 0.0
         }
@@ -60,7 +86,7 @@ def start_server():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(SOCKET_PATH)
     server.listen(5)
-    print(f"[+] Daemon listening on {SOCKET_PATH}")
+    print(f"[+] Medical RAG daemon running on {SOCKET_PATH}")
 
     while True:
         conn, _ = server.accept()
