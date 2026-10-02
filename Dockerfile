@@ -22,12 +22,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pandas \
     pillow
 
-# Copy application files
+# Copy application files and corpus
 COPY server.py /app/server.py
 COPY app.py /app/app.py
+COPY corpus /app/corpus
 
 # Create directory for output results
 RUN mkdir -p /app/output
 
-# Start the background daemon when the container starts, then keep container alive
-CMD python3 /app/server.py & tail -f /dev/null
+# Run the server daemon directly
+CMD ["python3", "/app/server.py"]
